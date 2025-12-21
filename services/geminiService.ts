@@ -97,7 +97,13 @@ Key requirements:
             }
         }
         
-        // General fallback for network errors, etc.
-        throw new Error("Failed to process image with AI. Check your connection or try again later.");
-    }
-};
+      try {
+  // AI logic
+} catch (error) {
+  console.error(error);
+
+  // General fallback for network errors, etc.
+  throw new Error(
+    "Failed to process image with AI. Check your connection or try again later."
+  );
+}
