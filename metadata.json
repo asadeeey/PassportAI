@@ -1,0 +1,5 @@
+{
+  "name": "AI Bulk Passport Photo Generator",
+  "description": "Upload multiple photos and this app will use AI to add professional suits and passport-style backgrounds, creating instant headshots in bulk.",
+  "requestFramePermissions": []
+}
