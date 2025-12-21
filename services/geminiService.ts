@@ -16,8 +16,10 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 export const professionalizeImage = async (imageFile: File, aspectRatioText: string, suitColor: string, lightingDescription: string): Promise<string> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable is not set.");
+    if (!import.meta.env.VITE_API_KEY) {
+  throw new Error("VITE_API_KEY environment variable is not set");
+}
+
     }
     const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
     
