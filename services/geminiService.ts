@@ -97,13 +97,25 @@ Key requirements:
             }
         }
         
-      try {
-  // AI logic
-} catch (error) {
-  console.error(error);
+    export const generateImage = async (imageBase64: string) => {
+  try {
+    // 🔑 Read API key (Vite-compatible)
+    const API_KEY = import.meta.env.VITE_API_KEY;
 
-  // General fallback for network errors, etc.
-  throw new Error(
-    "Failed to process image with AI. Check your connection or try again later."
-  );
-}
+    if (!API_KEY) {
+      throw new Error("VITE_API_KEY environment variable is not set");
+    }
+
+    // 👉 Your Gemini / AI request logic here
+    // const response = await fetch(...)
+
+    // return result;
+  } catch (error) {
+    console.error(error);
+
+    // General fallback for network errors, etc.
+    throw new Error(
+      "Failed to process image with AI. Check your connection or try again later."
+    );
+  }
+};
