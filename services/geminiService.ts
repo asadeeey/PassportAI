@@ -77,10 +77,8 @@ Requirements:
 
     throw new Error("AI did not generate an image");
 
-  } catch (error) {
-    console.error("Gemini error:", error);
-    throw new Error(
-      "Failed to process image with AI. Please try again later."
-    );
-  }
+ } catch (error) {
+  console.error("FULL GEMINI ERROR:", error);
+  throw error; // 👈 IMPORTANT: rethrow original error
+}
 };
