@@ -1,16 +1,31 @@
-import { GoogleGenAI } from "@google/genai";
+// services/geminiService.ts
 
-/* ---------- helper ---------- */
-const fileToBase64 = (file: File): Promise<string> => {
+/* ---------- Helper: File to Blob ---------- */
+// We don't need base64 for Hugging Face, we send the Blob directly
+const fileToBlob = async (file: File): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
     reader.onload = () => {
-      const result = reader.result as string;
-      const base64Data = result.split(",")[1];
-      resolve(base64Data);
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(new Blob([reader.result], { type: file.type }));
+      } else {
+        reject(new Error("Failed to convert file to blob"));
+      }
     };
-    reader.onerror = error => reject(error);
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+/* ---------- Helper: Blob to Base64 (for your app to display it) ---------- */
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 };
 
@@ -22,58 +37,56 @@ export const professionalizeImage = async (
   lightingDescription: string
 ): Promise<string> => {
 
-  const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  // 1. Get the Hugging Face Key
+  const API_KEY = import.meta.env.VITE_HF_API_KEY || process.env.HF_API_KEY;
 
   if (!API_KEY) {
-    throw new Error("API Key is missing. Check Netlify Environment Variables.");
+    throw new Error("Missing VITE_HF_API_KEY in Netlify.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  // 2. Define the Model (Flux is excellent for realism)
+  // You can also use "stabilityai/stable-diffusion-xl-base-1.0"
+  const MODEL_ID = "black-forest-labs/FLUX.1-schnell"; 
+  const API_URL = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
+
+  // 3. Construct a specific prompt for Image-to-Image
+  // Note: HF Inference API is mostly Text-to-Image. 
+  // To keep it simple and free, we will generate a NEW professional photo based on the description.
+  const prompt = `Professional passport photo, headshot, ${suitColor} business suit, shirt and tie, plain light grey background, ${lightingDescription}, photorealistic, 8k, sharp focus, ${aspectRatioText} aspect ratio`;
 
   try {
-    const base64Data = await fileToBase64(imageFile);
-
-    // 1. CHANGE MODEL TO IMAGEN 3
-    const response = await ai.models.generateContent({
-      model: "imagen-3.0-generate-001", 
-      contents: [
-        {
-          parts: [
-            // Note: Imagen primarily does Text-to-Image. 
-            // Sending the image as reference might work depending on the beta features available to your key,
-            // otherwise it will generate a new person based on the description.
-            {
-              text: `A professional passport photo of a person wearing a ${suitColor} business suit with shirt and tie. 
-              Background: Plain off-white or light grey. 
-              Lighting: ${lightingDescription || "Studio-quality lighting"}.
-              Aspect Ratio: ${aspectRatioText}.
-              Style: Photorealistic, high resolution.`,
-            },
-          ],
-        },
-      ],
-      // 2. REMOVE 'responseModalities' (Imagen defaults to image)
+    // 4. Call the API
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: {
+            // Optional parameters to guide the generation
+            width: 512,
+            height: 512, 
+        }
+      }),
     });
 
-    if (!response.candidates?.length) {
-      throw new Error("AI did not return a result");
+    if (!response.ok) {
+        const err = await response.text();
+        console.error("Hugging Face Error:", err);
+        throw new Error(`HF API Error: ${response.statusText}`);
     }
 
-    const parts = response.candidates[0].content?.parts ?? [];
+    // 5. Hugging Face returns the raw image blob directly
+    const imageBlob = await response.blob();
+    
+    // 6. Convert to Base64 so your React App can display it
+    const base64Data = await blobToBase64(imageBlob);
+    return base64Data;
 
-    for (const part of parts) {
-      if (part.inlineData?.data) {
-        return part.inlineData.data;
-      }
-    }
-
-    throw new Error("AI did not generate an image");
-
-  } catch (error: any) {
-    console.error("FULL API ERROR:", error);
-    if (error.status === 404 || error.code === 404) {
-         console.error("If you get a 404, it means your API Key does not have access to Imagen 3 yet.");
-    }
+  } catch (error) {
+    console.error("Generation failed:", error);
     throw error;
   }
 };
