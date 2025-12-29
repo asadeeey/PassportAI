@@ -46,7 +46,8 @@ export const professionalizeImage = async (
 
   // 2. Define the Model (Flux is excellent for realism)
   // You can also use "stabilityai/stable-diffusion-xl-base-1.0"
-  const MODEL_ID = "black-forest-labs/FLUX.1-schnell"; 
+  // This model works without special permissions
+  const MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"; 
   const API_URL = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
 
   // 3. Construct a specific prompt for Image-to-Image
